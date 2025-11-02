@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -28,23 +28,46 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String token = authHeader.substring(7);
-        String username = jwtService.extractUsername(token);
-        String role = jwtService.extractRole(token);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            var authorities = List.of(new SimpleGrantedAuthority(role));
+        if (token.isBlank() || token.split("\\.").length != 3) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(username, null, authorities);
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        try {
+            String username = jwtService.extractUsername(token);
+            String role = jwtService.extractRole(token);
 
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                // 🔹 Đảm bảo luôn chuẩn hóa role
+                String normalizedRole = role.toUpperCase().startsWith("ROLE_")
+                        ? role.toUpperCase()
+                        : "ROLE_" + role.toUpperCase();
+
+                var authority = new SimpleGrantedAuthority(normalizedRole);
+
+                var authToken = new UsernamePasswordAuthenticationToken(
+                        username,
+                        null,
+                        Collections.singletonList(authority)
+                );
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                System.out.println("✅ Gán quyền cho user: " + username + " → " + normalizedRole);
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Lỗi xác thực JWT: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

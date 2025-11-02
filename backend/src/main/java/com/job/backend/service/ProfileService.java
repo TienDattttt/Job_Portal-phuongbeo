@@ -13,7 +13,8 @@ public class ProfileService {
     private final ProfileRepository repository;
 
     public Map<String, Object> getProfileByUser(int userId) {
-        return repository.getByUserId(userId);
+        Map<String, Object> profile = repository.getByUserId(userId);
+        return profile;
     }
 
     public String createProfile(Map<String, Object> data) {
@@ -43,5 +44,4 @@ public class ProfileService {
                 ? "Đã cập nhật đường dẫn CV thành công."
                 : "Không tìm thấy hồ sơ #" + ungVienId;
     }
-
 }

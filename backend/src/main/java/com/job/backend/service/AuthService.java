@@ -15,32 +15,70 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
-    // Đăng ký
+    // ---------------------------
+    // 🟢 Đăng ký tài khoản mới
+    // ---------------------------
     public Map<String, Object> register(String fullName, String email, String password, int roleId) {
-        // Kiểm tra trùng email
+        // 1️⃣ Kiểm tra trùng email
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM [User] WHERE Email = ?", Integer.class, email);
         if (count != null && count > 0) {
             return Map.of("error", "Email đã được sử dụng");
         }
 
-        // Mã hóa mật khẩu
+        // 2️⃣ Mã hóa mật khẩu
         String encoded = passwordEncoder.encode(password);
 
-        // Thêm user mới (Phone có thể để null hoặc truyền mặc định)
+        // 3️⃣ Thêm user mới
         String defaultPhone = "0000000000";
         jdbcTemplate.update("""
-        INSERT INTO [User] (FullName, Email, PasswordHash, Phone, RoleID)
-        VALUES (?, ?, ?, ?, ?)
-    """, fullName, email, encoded, defaultPhone, roleId);
+            INSERT INTO [User] (FullName, Email, PasswordHash, Phone, RoleID)
+            VALUES (?, ?, ?, ?, ?)
+        """, fullName, email, encoded, defaultPhone, roleId);
 
-        // Sinh JWT
-        String token = jwtService.generateToken(email, getRoleName(roleId));
-        return Map.of("message", "Đăng ký thành công", "token", token);
+        // 4️⃣ Lấy ID user vừa thêm
+        Integer userId = jdbcTemplate.queryForObject(
+                "SELECT TOP 1 UserID FROM [User] WHERE Email = ? ORDER BY UserID DESC",
+                Integer.class, email);
+
+        // 5️⃣ Nếu là ỨNG VIÊN → tự động tạo hồ sơ rỗng
+        if (roleId == 3) {
+            Integer exist = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM UngVien WHERE UserID = ?",
+                    Integer.class, userId);
+
+            if (exist == null || exist == 0) {
+                jdbcTemplate.update("""
+                    INSERT INTO UngVien (UserID, NgaySinh, DiaChi, GioiTinh, HocVan, KyNang, KinhNghiem, CvLink, MoTaBanThan)
+                    VALUES (?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+                """, userId);
+            }
+        }
+
+        // ✅ 6️⃣ Lấy RoleName thật từ DB để ghi vào token (VD: "NTD")
+        String roleName = jdbcTemplate.queryForObject(
+                "SELECT RoleName FROM [Role] WHERE RoleID = ?",
+                String.class, roleId
+        );
+
+        // ✅ 7️⃣ Tạo token JWT chứa role và userId
+        String token = jwtService.generateToken(email, roleName, userId);
+
+        // 8️⃣ Trả về response
+        return Map.of(
+                "message", "Đăng ký thành công",
+                "token", token,
+                "user", Map.of(
+                        "userId", userId,
+                        "fullName", fullName,
+                        "roleId", roleId
+                )
+        );
     }
 
-
-    // Đăng nhập
+    // ---------------------------
+    // 🔵 Đăng nhập
+    // ---------------------------
     public Map<String, Object> login(String email, String password) {
         try {
             Map<String, Object> user = jdbcTemplate.queryForMap(
@@ -50,9 +88,17 @@ public class AuthService {
                 return Map.of("error", "Sai mật khẩu");
             }
 
+            // ✅ Lấy RoleName thật từ DB
+            String roleName = jdbcTemplate.queryForObject(
+                    "SELECT RoleName FROM [Role] WHERE RoleID = ?",
+                    String.class, user.get("RoleID")
+            );
+
+            // ✅ Sinh token chứa roleName + userId
             String token = jwtService.generateToken(
                     (String) user.get("Email"),
-                    getRoleName((Integer) user.get("RoleID"))
+                    roleName,
+                    ((Number) user.get("UserID")).intValue()
             );
 
             return Map.of(
@@ -67,13 +113,5 @@ public class AuthService {
         } catch (Exception e) {
             return Map.of("error", "Không tìm thấy tài khoản với email này");
         }
-    }
-
-    private String getRoleName(int roleId) {
-        return switch (roleId) {
-            case 1 -> "ADMIN";
-            case 2 -> "NTD";
-            default -> "UNGVIEN";
-        };
     }
 }

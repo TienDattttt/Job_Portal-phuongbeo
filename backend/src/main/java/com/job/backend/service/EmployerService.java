@@ -21,9 +21,13 @@ public class EmployerService {
         return repository.findById(ntdId);
     }
 
+    public Map<String, Object> getByUserId(int userId) {
+        return repository.findByUserId(userId);
+    }
+
     public String createEmployer(Map<String, Object> data) {
         int result = repository.createEmployer(data);
-        return (result > 0) ? "Đã tạo hồ sơ doanh nghiệp mới." : "Không thể tạo hồ sơ.";
+        return (result > 0) ? "Tạo hồ sơ công ty thành công!" : "Không thể tạo hồ sơ.";
     }
 
     public String updateEmployer(int ntdId, Map<String, Object> data) {
@@ -33,18 +37,17 @@ public class EmployerService {
                 : "Không tìm thấy công ty #" + ntdId;
     }
 
-    public String deleteEmployer(int ntdId) {
-        int result = repository.deleteEmployer(ntdId);
-        return (result > 0)
-                ? "Đã xóa doanh nghiệp #" + ntdId
-                : "Không tìm thấy doanh nghiệp #" + ntdId;
-    }
-
     public String updateLogo(int ntdId, String logoUrl) {
         int result = repository.updateLogo(ntdId, logoUrl);
         return (result > 0)
                 ? "Đã cập nhật logo thành công."
-                : "Không tìm thấy doanh nghiệp #" + ntdId;
+                : "Không tìm thấy công ty #" + ntdId;
     }
 
+    public String deleteEmployer(int ntdId) {
+        int result = repository.deleteEmployer(ntdId);
+        return (result > 0)
+                ? "Đã xóa công ty #" + ntdId
+                : "Không tìm thấy công ty #" + ntdId;
+    }
 }

@@ -13,68 +13,75 @@ public class EmployerRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    /**
-     * Lấy danh sách tất cả nhà tuyển dụng (admin)
-     */
+    // 🟢 Lấy danh sách tất cả NTD
     public List<Map<String, Object>> findAll() {
-        String sql = "SELECT * FROM NhaTuyenDung ORDER BY CreatedAt DESC";
-        return jdbcTemplate.queryForList(sql);
+        return jdbcTemplate.queryForList("SELECT * FROM NhaTuyenDung ORDER BY NTDID DESC");
     }
 
-    /**
-     * Lấy chi tiết nhà tuyển dụng theo ID
-     */
+    // 🟢 Lấy chi tiết theo NTDID
     public Map<String, Object> findById(int ntdId) {
-        String sql = "SELECT * FROM NhaTuyenDung WHERE NTDID = ?";
-        return jdbcTemplate.queryForMap(sql, ntdId);
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(
+                "SELECT * FROM NhaTuyenDung WHERE NTDID = ?", ntdId);
+        if (list.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy NTDID = " + ntdId);
+        }
+        return list.get(0);
     }
 
-    /**
-     * Tạo mới hồ sơ nhà tuyển dụng
-     */
+    // 🟢 Lấy theo UserID (FE gọi API này)
+    public Map<String, Object> findByUserId(int userId) {
+        List<Map<String, Object>> list = jdbcTemplate.queryForList(
+                "SELECT * FROM NhaTuyenDung WHERE UserID = ?", userId);
+        if (list.isEmpty()) {
+            throw new RuntimeException("Chưa có hồ sơ công ty cho UserID = " + userId);
+        }
+        return list.get(0);
+    }
+
+    // 🟢 Tạo mới NTD
     public int createEmployer(Map<String, Object> data) {
         String sql = """
-            INSERT INTO NhaTuyenDung (TenCongTy, MaSoThue, DiaChi, MoTa, LogoURL, Website)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO NhaTuyenDung (UserID, TenCongTy, MaSoThue, DiaChi, LinhVuc, MoTa, Website, LogoURL)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """;
         return jdbcTemplate.update(sql,
+                data.get("userID"),
                 data.get("tenCongTy"),
-                data.get("maSoThue"),
-                data.get("diaChi"),
-                data.get("moTa"),
-                data.get("logoURL"),
-                data.get("website"));
+                data.getOrDefault("maSoThue", ""),
+                data.getOrDefault("diaChi", ""),
+                data.getOrDefault("linhVuc", ""),
+                data.getOrDefault("moTa", ""),
+                data.getOrDefault("website", ""),
+                data.getOrDefault("logoURL", null));
     }
 
-    /**
-     * Cập nhật thông tin nhà tuyển dụng
-     */
+    // 🟢 Cập nhật NTD
     public int updateEmployer(int ntdId, Map<String, Object> data) {
         String sql = """
             UPDATE NhaTuyenDung
-            SET TenCongTy = ?, MaSoThue = ?, DiaChi = ?, MoTa = ?, LogoURL = ?, Website = ?
+            SET TenCongTy = ?, MaSoThue = ?, DiaChi = ?, LinhVuc = ?, MoTa = ?, Website = ?, LogoURL = ?
             WHERE NTDID = ?
         """;
         return jdbcTemplate.update(sql,
                 data.get("tenCongTy"),
-                data.get("maSoThue"),
-                data.get("diaChi"),
-                data.get("moTa"),
-                data.get("logoURL"),
-                data.get("website"),
+                data.getOrDefault("maSoThue", ""),
+                data.getOrDefault("diaChi", ""),
+                data.getOrDefault("linhVuc", ""),
+                data.getOrDefault("moTa", ""),
+                data.getOrDefault("website", ""),
+                data.getOrDefault("logoURL", ""),
                 ntdId);
     }
 
-    /**
-     * Xóa doanh nghiệp (nếu cần)
-     */
+    // 🟢 Cập nhật logo riêng
+    public int updateLogo(int ntdId, String logoUrl) {
+        return jdbcTemplate.update(
+                "UPDATE NhaTuyenDung SET LogoURL = ? WHERE NTDID = ?",
+                logoUrl, ntdId);
+    }
+
+    // 🟢 Xóa công ty
     public int deleteEmployer(int ntdId) {
         return jdbcTemplate.update("DELETE FROM NhaTuyenDung WHERE NTDID = ?", ntdId);
     }
-
-    public int updateLogo(int ntdId, String logoUrl) {
-        String sql = "UPDATE NhaTuyenDung SET LogoURL = ? WHERE NTDID = ?";
-        return jdbcTemplate.update(sql, logoUrl, ntdId);
-    }
-
 }

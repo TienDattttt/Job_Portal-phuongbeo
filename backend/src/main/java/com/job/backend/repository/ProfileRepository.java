@@ -3,6 +3,8 @@ package com.job.backend.repository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -12,10 +14,11 @@ public class ProfileRepository {
     private final JdbcTemplate jdbcTemplate;
 
     /**
-     * Lấy hồ sơ theo UserID
+     * Lấy hồ sơ theo UserID.
+     * Nếu chưa có -> tự động tạo hồ sơ rỗng.
      */
     public Map<String, Object> getByUserId(int userId) {
-        String sql = """
+        String selectSql = """
             SELECT u.UngVienID, u.UserID, usr.FullName, usr.Email, usr.Phone,
                    u.NgaySinh, u.DiaChi, u.GioiTinh, 
                    u.HocVan, u.KyNang, u.KinhNghiem, 
@@ -24,7 +27,22 @@ public class ProfileRepository {
             JOIN [User] usr ON usr.UserID = u.UserID
             WHERE u.UserID = ?
         """;
-        return jdbcTemplate.queryForMap(sql, userId);
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(selectSql, userId);
+
+        // 🟡 Nếu chưa có hồ sơ -> tự tạo hồ sơ rỗng
+        if (rows.isEmpty()) {
+            String insertSql = """
+                INSERT INTO UngVien (UserID, NgaySinh, DiaChi, GioiTinh, HocVan, KyNang, KinhNghiem, CVLink, MoTaBanThan)
+                VALUES (?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)
+            """;
+            jdbcTemplate.update(insertSql, userId);
+
+            // Lấy lại hồ sơ vừa tạo
+            rows = jdbcTemplate.queryForList(selectSql, userId);
+        }
+
+        return rows.get(0);
     }
 
     /**
@@ -76,9 +94,11 @@ public class ProfileRepository {
         return jdbcTemplate.update("DELETE FROM UngVien WHERE UngVienID = ?", ungVienId);
     }
 
+    /**
+     * Cập nhật đường dẫn CV
+     */
     public int updateCvLink(int ungVienId, String cvLink) {
         String sql = "UPDATE UngVien SET CVLink = ? WHERE UngVienID = ?";
         return jdbcTemplate.update(sql, cvLink, ungVienId);
     }
-
 }

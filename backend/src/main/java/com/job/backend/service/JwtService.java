@@ -19,9 +19,13 @@ public class JwtService {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
     }
 
-    public String generateToken(String username, String role) {
+    // ✅ Sinh token có chứa role và username
+    public String generateToken(String username, String role, int userId) {
         return Jwts.builder()
-                .setClaims(Map.of("role", role))
+                .setClaims(Map.of(
+                        "role", role,
+                        "userId", userId // thêm userId vào claims
+                ))
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
@@ -36,6 +40,15 @@ public class JwtService {
     public String extractRole(String token) {
         Claims claims = extractAllClaims(token);
         return (String) claims.get("role");
+    }
+
+    // ✅ Hàm mới: Lấy userId từ token
+    public Integer extractUserId(String token) {
+        Claims claims = extractAllClaims(token);
+        Object userIdObj = claims.get("userId");
+        if (userIdObj instanceof Integer) return (Integer) userIdObj;
+        if (userIdObj instanceof Number) return ((Number) userIdObj).intValue();
+        return null;
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
