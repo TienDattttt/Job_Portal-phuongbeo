@@ -29,12 +29,13 @@ export default function Company() {
     fetchEmployer();
   }, []);
 
-  // 🟢 Lấy thông tin hồ sơ công ty
   const fetchEmployer = async () => {
     if (!user) return;
+
     try {
       const response = await api.get(`/employers/${user.userId}`);
       setEmployer(response.data);
+
       setFormData({
         TenCongTy: response.data.TenCongTy || '',
         MaSoThue: response.data.MaSoThue || '',
@@ -43,6 +44,7 @@ export default function Company() {
         Website: response.data.Website || '',
         MoTa: response.data.MoTa || '',
       });
+
     } catch {
       toast.error('Không thể tải thông tin công ty');
     } finally {
@@ -50,24 +52,29 @@ export default function Company() {
     }
   };
 
-  // 🟢 Lưu thông tin công ty
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
-      if (!employer || !employer.NTDID) {
-        // Nếu chưa có hồ sơ -> tạo mới
-        await api.post('/employers', {
-          UserID: user?.userId,
-          ...formData,
-        });
-        toast.success('Đã tạo hồ sơ công ty thành công!');
+      const payload = {
+        UserID: user?.userId,
+        TenCongTy: formData.TenCongTy || employer?.TenCongTy,
+        MaSoThue: formData.MaSoThue,
+        DiaChi: formData.DiaChi || employer?.DiaChi,
+        LinhVuc: formData.LinhVuc,
+        Website: formData.Website,
+        MoTa: formData.MoTa,
+      };
+
+      if (!employer?.NTDID) {
+        await api.post('/employers', payload);
+        toast.success('Đã tạo hồ sơ công ty!');
       } else {
-        // Đã có -> cập nhật
-        await api.put(`/employers/${employer.NTDID}`, formData);
+        await api.put(`/employers/${employer.NTDID}`, payload);
         toast.success('Đã cập nhật thông tin công ty!');
       }
+
       fetchEmployer();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Cập nhật thất bại');
@@ -76,7 +83,6 @@ export default function Company() {
     }
   };
 
-  // 🟢 Upload logo
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !employer) return;
@@ -86,18 +92,18 @@ export default function Company() {
 
     setUploading(true);
     try {
-      const response = await api.post('/employers/upload-logo', formDataFile, {
+      const res = await api.post('/employers/upload-logo', formDataFile, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       await api.patch(`/employers/${employer.NTDID}/logo`, {
-        logoURL: response.data.logoURL,
+        LogoURL: res.data.logoURL,
       });
 
-      toast.success('Cập nhật logo thành công!');
+      toast.success('Logo đã được cập nhật!');
       fetchEmployer();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Tải logo thất bại');
+    } catch {
+      toast.error('Tải logo thất bại');
     } finally {
       setUploading(false);
     }
@@ -118,162 +124,109 @@ export default function Company() {
       <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold">Thông tin công ty</h2>
-          <p className="text-muted-foreground">
-            Quản lý thông tin doanh nghiệp của bạn
-          </p>
+          <p className="text-muted-foreground">Quản lý thông tin doanh nghiệp của bạn</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* 🏢 Form thông tin công ty */}
+          
           <div className="lg:col-span-2">
             <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Thông tin chung</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Thông tin chung</CardTitle></CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="TenCongTy">Tên công ty *</Label>
+                    <Label>Tên công ty *</Label>
                     <Input
-                      id="TenCongTy"
                       value={formData.TenCongTy}
-                      onChange={(e) =>
-                        setFormData({ ...formData, TenCongTy: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, TenCongTy: e.target.value })}
                       required
                     />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
+
                     <div className="space-y-2">
-                      <Label htmlFor="MaSoThue">Mã số thuế</Label>
+                      <Label>Mã số thuế</Label>
                       <Input
-                        id="MaSoThue"
                         value={formData.MaSoThue}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            MaSoThue: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setFormData({ ...formData, MaSoThue: e.target.value })}
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="LinhVuc">Lĩnh vực hoạt động</Label>
+                      <Label>Lĩnh vực</Label>
                       <Input
-                        id="LinhVuc"
                         value={formData.LinhVuc}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            LinhVuc: e.target.value,
-                          })
-                        }
+                        onChange={(e) => setFormData({ ...formData, LinhVuc: e.target.value })}
                       />
                     </div>
+
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="DiaChi">Địa chỉ *</Label>
+                    <Label>Địa chỉ *</Label>
                     <Input
-                      id="DiaChi"
                       value={formData.DiaChi}
-                      onChange={(e) =>
-                        setFormData({ ...formData, DiaChi: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, DiaChi: e.target.value })}
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="Website">Website</Label>
+                    <Label>Website</Label>
                     <Input
-                      id="Website"
-                      type="url"
                       value={formData.Website}
-                      onChange={(e) =>
-                        setFormData({ ...formData, Website: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, Website: e.target.value })}
                       placeholder="https://example.com"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="MoTa">Mô tả công ty</Label>
+                    <Label>Mô tả</Label>
                     <Textarea
-                      id="MoTa"
                       value={formData.MoTa}
-                      onChange={(e) =>
-                        setFormData({ ...formData, MoTa: e.target.value })
-                      }
-                      placeholder="Giới thiệu về công ty..."
+                      onChange={(e) => setFormData({ ...formData, MoTa: e.target.value })}
                       rows={6}
                     />
                   </div>
 
                   <Button type="submit" disabled={saving}>
-                    {saving
-                      ? 'Đang lưu...'
-                      : employer?.NTDID
-                      ? 'Cập nhật thông tin'
-                      : 'Tạo hồ sơ mới'}
+                    {saving ? 'Đang lưu...' : employer?.NTDID ? 'Cập nhật' : 'Tạo hồ sơ'}
                   </Button>
+
                 </form>
               </CardContent>
             </Card>
           </div>
 
-          {/* 🖼️ Logo công ty */}
           <div>
             <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle>Logo công ty</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Logo công ty</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+
                 <div className="flex justify-center">
                   {employer?.LogoURL ? (
-                    <img
-                      src={employer.LogoURL}
-                      alt={employer.TenCongTy}
-                      className="h-32 w-32 rounded-lg object-cover"
-                    />
+                    <img src={employer.LogoURL} className="h-32 w-32 rounded-lg object-cover" />
                   ) : (
-                    <div className="flex h-32 w-32 items-center justify-center rounded-lg bg-muted">
+                    <div className="flex h-32 w-32 items-center justify-center bg-muted rounded-lg">
                       <Building2 className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
                 </div>
-                <div>
-                  <input
-                    type="file"
-                    id="logo-upload"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      document.getElementById('logo-upload')?.click()
-                    }
-                    disabled={uploading}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {uploading
-                      ? 'Đang tải lên...'
-                      : employer?.LogoURL
-                      ? 'Cập nhật logo'
-                      : 'Tải lên logo'}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Chỉ chấp nhận file JPG, PNG. Kích thước tối đa 2MB.
-                </p>
+
+                <input type="file" id="logo-upload" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+
+                <Button variant="outline" className="w-full" onClick={() => document.getElementById('logo-upload')?.click()} disabled={uploading}>
+                  <Upload className="mr-2 h-4 w-4"/>
+                  {uploading ? 'Đang tải...' : employer?.LogoURL ? 'Đổi logo' : 'Tải logo'}
+                </Button>
+
+                <p className="text-xs text-muted-foreground">Hỗ trợ JPG, PNG. Tối đa 2MB.</p>
               </CardContent>
             </Card>
           </div>
+
         </div>
       </div>
     </DashboardLayout>

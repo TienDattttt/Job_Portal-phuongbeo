@@ -41,37 +41,40 @@ public class EmployerRepository {
     // 🟢 Tạo mới NTD
     public int createEmployer(Map<String, Object> data) {
         String sql = """
-            INSERT INTO NhaTuyenDung (UserID, TenCongTy, MaSoThue, DiaChi, LinhVuc, MoTa, Website, LogoURL)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+        INSERT INTO NhaTuyenDung (UserID, TenCongTy, MaSoThue, DiaChi, LinhVuc, MoTa, Website, LogoURL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
         return jdbcTemplate.update(sql,
-                data.get("userID"),
-                data.get("tenCongTy"),
-                data.getOrDefault("maSoThue", ""),
-                data.getOrDefault("diaChi", ""),
-                data.getOrDefault("linhVuc", ""),
-                data.getOrDefault("moTa", ""),
-                data.getOrDefault("website", ""),
-                data.getOrDefault("logoURL", null));
+                data.get("UserID"),
+                data.getOrDefault("TenCongTy", ""),
+                data.getOrDefault("MaSoThue", ""),
+                data.getOrDefault("DiaChi", ""),
+                data.getOrDefault("LinhVuc", ""),
+                data.getOrDefault("MoTa", ""),
+                data.getOrDefault("Website", ""),
+                data.getOrDefault("LogoURL", null));
     }
 
     // 🟢 Cập nhật NTD
     public int updateEmployer(int ntdId, Map<String, Object> data) {
         String sql = """
-            UPDATE NhaTuyenDung
-            SET TenCongTy = ?, MaSoThue = ?, DiaChi = ?, LinhVuc = ?, MoTa = ?, Website = ?, LogoURL = ?
-            WHERE NTDID = ?
-        """;
+        UPDATE NhaTuyenDung
+        SET TenCongTy = ?, MaSoThue = ?, DiaChi = ?, LinhVuc = ?, MoTa = ?, Website = ?, LogoURL = ?
+        WHERE NTDID = ?
+    """;
+
+        // Dùng key đúng như FE truyền (PascalCase)
         return jdbcTemplate.update(sql,
-                data.get("tenCongTy"),
-                data.getOrDefault("maSoThue", ""),
-                data.getOrDefault("diaChi", ""),
-                data.getOrDefault("linhVuc", ""),
-                data.getOrDefault("moTa", ""),
-                data.getOrDefault("website", ""),
-                data.getOrDefault("logoURL", ""),
+                data.get("TenCongTy"),
+                data.getOrDefault("MaSoThue", ""),
+                data.getOrDefault("DiaChi", ""),
+                data.getOrDefault("LinhVuc", ""),
+                data.getOrDefault("MoTa", ""),
+                data.getOrDefault("Website", ""),
+                data.getOrDefault("LogoURL", ""),
                 ntdId);
     }
+
 
     // 🟢 Cập nhật logo riêng
     public int updateLogo(int ntdId, String logoUrl) {

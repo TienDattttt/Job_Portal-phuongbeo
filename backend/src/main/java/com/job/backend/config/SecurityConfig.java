@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/jobs/**").hasAnyRole("NTD", "ADMIN")
 
                         // 3️⃣ Nhà tuyển dụng (NTD)
+                        .requestMatchers(HttpMethod.POST, "/api/employers").permitAll()
                         .requestMatchers("/api/employers/**").hasAnyRole("NTD", "ADMIN")
 
                         // 4️⃣ Ứng viên (UNGVIEN)
