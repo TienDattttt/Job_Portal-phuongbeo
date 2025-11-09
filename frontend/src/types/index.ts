@@ -12,10 +12,14 @@ export interface User {
 }
 
 export interface AuthResponse {
-  message: string;
-  token: string;
-  user: User;
+  success: boolean;
+  message?: string;      // thông báo thành công hoặc lỗi
+  error?: string;        // mô tả lỗi (VD: Email đã tồn tại, Sai mật khẩu)
+  errorCode?: string;    // mã lỗi (VD: EMAIL_EXISTS)
+  token?: string;        // JWT token
+  user?: User;           // thông tin user khi thành công
 }
+
 
 export interface Job {
   tinID: number;

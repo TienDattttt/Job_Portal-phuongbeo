@@ -38,52 +38,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await api.post<AuthResponse>('/auth/login', { email, password });
-      const { token, user: userData } = response.data;
-      
-      if (!token || !userData || typeof userData !== 'object') {
-        throw new Error('Dữ liệu xác thực không hợp lệ từ server');
-      }
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
-      toast.success('Đăng nhập thành công!');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Đăng nhập thất bại';
-      toast.error(message);
-      throw error;
-    }
-  };
+// 🟢 Đăng nhập
+const login = async (email: string, password: string) => {
+  try {
+    const response = await api.post<AuthResponse>('/auth/login', { email, password });
+    const data = response.data;
 
-  const register = async (fullName: string, email: string, password: string, roleId: number) => {
-    try {
-      const response = await api.post<AuthResponse>('/auth/register', {
-        fullName,
-        email,
-        password,
-        roleId,
-      });
-      const { token, user: userData } = response.data;
-      
-      if (!token || !userData || typeof userData !== 'object') {
-        throw new Error('Dữ liệu xác thực không hợp lệ từ server');
-      }
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      
-      toast.success('Đăng ký thành công!');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Đăng ký thất bại';
-      toast.error(message);
-      throw error;
+    if (!data.success) {
+      // ⛔ backend trả lỗi có "error" và "errorCode"
+      throw new Error(data.error || 'Đăng nhập thất bại');
     }
-  };
+
+    const { token, user: userData } = data;
+    if (!token || !userData || typeof userData !== 'object') {
+      throw new Error('Dữ liệu xác thực không hợp lệ từ server');
+    }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+
+    toast.success(data.message || 'Đăng nhập thành công!');
+  } catch (error: any) {
+    // lấy message từ backend nếu có
+    const backendMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      'Đăng nhập thất bại';
+    toast.error(backendMessage);
+    throw error;
+  }
+};
+
+// 🟢 Đăng ký
+const register = async (
+  fullName: string,
+  email: string,
+  password: string,
+  roleId: number
+) => {
+  try {
+    const response = await api.post<AuthResponse>('/auth/register', {
+      fullName,
+      email,
+      password,
+      roleId,
+    });
+    const data = response.data;
+
+    if (!data.success) {
+      // ⛔ backend báo lỗi email trùng, format sai, ...
+      throw new Error(data.error || 'Đăng ký thất bại');
+    }
+
+    const { token, user: userData } = data;
+    if (!token || !userData || typeof userData !== 'object') {
+      throw new Error('Dữ liệu xác thực không hợp lệ từ server');
+    }
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+
+    toast.success(data.message || 'Đăng ký thành công!');
+  } catch (error: any) {
+    const backendMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      'Đăng ký thất bại';
+    toast.error(backendMessage);
+    throw error;
+  }
+};
+
 
   const logout = () => {
     localStorage.removeItem('token');
