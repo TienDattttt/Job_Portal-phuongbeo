@@ -5,7 +5,13 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export default function Register() {
@@ -15,25 +21,71 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState<string>(UserRole.UNGVIEN.toString());
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already authenticated
   if (isAuthenticated) {
     navigate('/dashboard', { replace: true });
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Họ và tên không được để trống';
+    }
+
+    if (!email.trim()) {
+      newErrors.email = 'Email không được để trống';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Sai định dạng email';
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Mật khẩu không được để trống';
+    } else if (password.length < 8) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+    } else if (!/[a-z]/.test(password)) {
+      newErrors.password = 'Mật khẩu phải bao gồm chữ thường';
+    } else if (!/[A-Z]/.test(password)) {
+      newErrors.password = 'Mật khẩu phải bao gồm chữ hoa';
+    } else if (!/[0-9]/.test(password)) {
+      newErrors.password = 'Mật khẩu phải bao gồm ít nhất một số';
+    } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      newErrors.password = 'Mật khẩu phải bao gồm ký tự đặc biệt';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
+    // kiểm tra lại mỗi lần người dùng nhấn nút
+    if (!validateForm()) return;
+
+    setLoading(true);
     try {
       await register(fullName, email, password, parseInt(roleId));
       navigate('/dashboard');
     } catch (error) {
-      // Error handled in context
+      // lỗi xử lý trong context
     } finally {
       setLoading(false);
     }
+  };
+
+  // Xóa lỗi realtime khi người dùng nhập lại
+  const handleInputChange = (field: string, value: string) => {
+    if (errors[field]) {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+      setErrors(newErrors);
+    }
+    if (field === 'fullName') setFullName(value);
+    if (field === 'email') setEmail(value);
+    if (field === 'password') setPassword(value);
   };
 
   return (
@@ -46,41 +98,53 @@ export default function Register() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} noValidate  className="space-y-4">
+            {/* Họ và tên */}
+            <div className="space-y-1">
               <Label htmlFor="fullName">Họ và tên</Label>
               <Input
                 id="fullName"
                 type="text"
                 placeholder="Nguyễn Văn A"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
+                onChange={(e) => handleInputChange('fullName', e.target.value)}
               />
+              {errors.fullName && (
+                <p className="text-sm text-red-500">{errors.fullName}</p>
+              )}
             </div>
-            <div className="space-y-2">
+
+            {/* Email */}
+            <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="email@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                onChange={(e) => handleInputChange('email', e.target.value)}
               />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email}</p>
+              )}
             </div>
-            <div className="space-y-2">
+
+            {/* Mật khẩu */}
+            <div className="space-y-1">
               <Label htmlFor="password">Mật khẩu</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
+                onChange={(e) => handleInputChange('password', e.target.value)}
               />
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password}</p>
+              )}
             </div>
+
+            {/* Loại tài khoản */}
             <div className="space-y-2">
               <Label>Loại tài khoản</Label>
               <RadioGroup value={roleId} onValueChange={setRoleId}>
@@ -98,10 +162,13 @@ export default function Register() {
                 </div>
               </RadioGroup>
             </div>
+
+            {/* Submit */}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </Button>
           </form>
+
           <div className="mt-4 text-center text-sm">
             Đã có tài khoản?{' '}
             <Link to="/login" className="text-primary hover:underline">
